@@ -8,6 +8,7 @@
  */
 
 using System;
+using System.ComponentModel.Design;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 using static System.Console;
@@ -127,7 +128,7 @@ class Program {
 		//maybe an array of strings containing room descriptions, like a choose your own adventure book?
 		//maybe a random number generator, say 1 to 6, and if it rolls a certain number, the player encounters a monster?
 
-		bool playerHasKey = false; //player does not have the key when they start the game.
+		
 
 
         Random rng = new Random(); //random number generator
@@ -151,31 +152,128 @@ class Program {
 			throw new NameException(player.name);
 		} else { WriteLine("Go forth, " + player.name + "!"); }
 
+		moveRoom(0); //print the text for the very first room, don't worry about the key
+		
+		//process user input for the game
+		while(player.isPlayerDead == false) {
+            if(player.health <= 0) {
+                moveRoom(98); //player has died
+				player.isPlayerDead = true;
+            } else { 
+				processInput();
+            }
+        }
+		
 
-        //maybe a simple way of processing the direction is for the player to type N S E W (so that lowercase n can be reserved for "Y/n")
 
+		
+	}
+
+	static void moveRoom(int destination) {
         string[] rooms = new string[100];
-        string response; //string for processing Y/n questions.
-        //rooms for special circumstances are best, in my opinion, left at the end of the array. We can jump back to the most recent room before the circumstance
+        //rooms for special circumstances are best, in my opinion, left at the end of the array.
+        //We can jump back to the most recent room before the circumstance
         rooms[97] = "You flee from the monster!"; //maybe a random chance to not flee?
         rooms[99] = "You have left the dungeon of your own free will.\n\nGAME OVER"; //player enters S in the first room
         rooms[98] = "You died!\n\nGAME OVER"; //self explanatory 
-		rooms[96] = "You do not have the key."; //player does not have the key for a door
-		rooms[95] = "Alright then."; //player enters lowercase n for a Y/n option.
+        rooms[96] = "You do not have the key. You cannot go this way until you find it."; //player does not have the key for a door
+        rooms[95] = "Alright then."; //player enters lowercase n for a Y/n option.
 
         rooms[0] = "ROOM 1\nTo the north you see a locked door. You do not have the key...\nOptions are: N E S"; //first room, no key.
-        rooms[1] = "ROOM 1\nTo the north you see a locked door. Use the key? (Y/n)"; //first room, has the key.
+        rooms[1] = "ROOM 1\nTo the north you see a locked door. You use the key."; //first room, has the key.
         rooms[2] = "ROOM 2\nTo the west you see the room with the locked door." +
-            "\nIn this room, you see a fountain. As you walk over to the fountain, you see a key shimmering in the water. Pick up the key? (Y/n)";
+            "\nIn this room, you see a fountain. As you walk over to the fountain, you see a key shimmering in the water.\nYou pick up the key and add it to your inventory.";
         rooms[3] = "ROOM 3\nOpening the door, you see a set of stairs. Going down the stairs leads further into the dungeon. Treasure and danger await...";
         rooms[4] = "ROOM 4\nGoing down the stairs, you see a monster. Attack the monster? (Y/n)";
+		WriteLine(rooms[destination]);
+    }
 
-        int currentRoom = 0; //display the text for the current room.
-        WriteLine(rooms[currentRoom]); //write the corrosponding room text
-		
-		//TODO: add logic to change rooms
-	}
+	static void moveRoom(int destination, bool playerHasKey) {
+        string[] rooms = new string[100];
+		//rooms for special circumstances are best, in my opinion, left at the end of the array.
+		//We can jump back to the most recent room before the circumstance
+		rooms[94] = "You are at the beginning of the dungeon. To the south you see the exit."; 
+		rooms[97] = "You flee from the monster!"; //maybe a random chance to not flee?
+        rooms[99] = "You have left the dungeon of your own free will.\n\nGAME OVER"; //player enters S in the first room
+        rooms[98] = "You died!\n\nGAME OVER"; //self explanatory 
+        rooms[96] = "You do not have the key. You cannot go this way until you find it."; //player does not have the key for a door
+        rooms[95] = "Alright then."; //player enters lowercase n for a Y/n option.
 
+        rooms[0] = "ROOM 1\nTo the north you see a locked door. You do not have the key. To the south, you see the exit to the dungeon.\nOptions are: N E S"; //first room, no key.
+        rooms[1] = "ROOM 1\nTo the north you see a locked door. You use the key."; //first room, has the key.
+        rooms[2] = "ROOM 2\nTo the west you see the room with the locked door." +
+            "\nIn this room, you see a fountain. As you walk over to the fountain, you see a key shimmering in the water.\nYou pick up the key and add it to your inventory.\nOptions are: W";
+        rooms[3] = "ROOM 3\nOpening the door, you see a set of stairs. Going down the stairs leads further into the dungeon. Treasure and danger await...";
+        rooms[4] = "ROOM 4\nGoing down the stairs, you see a monster. You attack the monster!";
+        
+		if(playerHasKey == false) { 
+			WriteLine(rooms[96]); 
+		} else if(destination == 2) {
+			playerHasKey = true;
+			processInput();
+        } else {
+            WriteLine(rooms[destination]); //write the corresponding room text
+        }
+    }
+
+
+	static void processInput() {
+        bool playerHasKey = false; //player does not have the key when they start the game.
+		int currentRoom = 0; //player is in the first room when they start the game
+        Write("Where do you go? >> ");
+
+        string option = ReadLine();
+
+        switch(option) {
+            case "N":
+            case "n":
+            case "north":
+            case "North":
+				if(playerHasKey == false) {
+					moveRoom(1, false);
+                } else { 
+					moveRoom(2, true); 
+				}
+                processInput();
+                break;
+            case "E":
+            case "e":
+            case "east":
+            case "East":
+				moveRoom(2);
+				processInput();
+                break;
+            case "S":
+            case "s":
+            case "south":
+            case "South":
+                if(currentRoom == 0) {
+                    //player has left the dungeon of their own free will
+                    moveRoom(99);
+					Environment.Exit(0);
+				} 
+				processInput();
+                break;
+            case "w":
+            case "W":
+            case "west":
+            case "West":
+                WriteLine("You go west");
+				processInput();
+                break;
+			case "quit":
+			case "q":
+			case "Quit":
+				WriteLine("Goodbye.");
+				Environment.Exit(0);
+				break;
+            
+			default:
+                WriteLine("I don't understand. Could you repeat that?");
+				processInput();
+                break;
+        }
+    }
     static void Main() {
 		mainMenu();
 	}
