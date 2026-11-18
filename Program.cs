@@ -13,60 +13,75 @@ using System.Security.Cryptography;
 using System.Xml.Linq;
 using static System.Console;
 
-class Player {
-  public Player() {
-		this.health = health;
-		this.mana = mana;
-		this.name = name;
-		//maybe roll a random number for player health and mana?
+
+
+
+class Room {
+	public Room(int roomNumber, int description) {
+		RoomNumber = roomNumber;
+		DescriptionIndex = description;
+		Visited = false;
+		Locked = false;
 	}
 
-	public int health { get; set; }
-	public int mana { get; set; }
-	public string name { get; set; }
-	public int gold { get; set; }
-	public bool isPlayerDead { get; set; }
+	public int RoomNumber { get; set; }
+	public int DescriptionIndex { get; set; }
+	public Room North { get; set; }
+	public Room East { get; set; }
+	public Room South { get; set; }
+	public Room West { get; set; }
+	public bool Locked { get; set; }
+	public bool Visited { get; set; }
+}
+class Player {
+	public Player(string name, Room startingRoom) {
+		Name = name;
+		CurrentRoom = startingRoom;
+		PreviousRoom = null;
+		PlayerHasKey = false;
+		IsPlayerDead = false;
+		GameOver = false;
+	}
 
-	private int _health;
-	private int _mana;
-	private string _name;
-	private int _gold;
-	private bool _playerDead;
-
+	public Room CurrentRoom { get; set; }
+	public Room PreviousRoom { get; set; }
+	public bool PlayerHasKey { get; set; }
+	public string Name { get; set; }
+	public bool IsPlayerDead { get; set; }
+	public bool GameOver { get; set; }
 }
 
-
 class Enemy {
-    public void EnemyTaunt() {
-        WriteLine("GIMME ALL YOUR MONEY!!!");
-    }
+	public void EnemyTaunt() {
+		WriteLine("GIMME ALL YOUR MONEY!!!");
+	}
 
-    public void Confrontation() {
-        EnemyTaunt();
-        WriteLine("What is your action? R for run, A for attack, B for bribe >>");
-        string Response = ReadLine();
+	public void Confrontation() {
+		EnemyTaunt();
+		WriteLine("What is your action? R for run, A for attack, B for bribe >>");
+		string Response = ReadLine();
 
-        // Placeholder response actions... 
+		// Placeholder response actions... 
 
-        if(Response == "A" || Response == "a") {
-			
+		if(Response == "A" || Response == "a") {
+
 			//maybe roll a random number for damage, and subtract from the player's health?
 
-            WriteLine("You died... He had a bazooka");
+			WriteLine("You died... He had a bazooka");
 
 
-        } else if(Response == "B" || Response == "b") { 
+		} else if(Response == "B" || Response == "b") {
 			WriteLine("He took literally everything you had... but you lived");
 
 
-        } else if(Response == "R" || Response == "r") {
-            WriteLine("Somehow you escaped...");
+		} else if(Response == "R" || Response == "r") {
+			WriteLine("Somehow you escaped...");
 
 
-        } else {
-            WriteLine("You froze! The perpetrator kidnapped you!");
-        }
-    }
+		} else {
+			WriteLine("You froze! The perpetrator kidnapped you!");
+		}
+	}
 
 
 	public int health { get; set; }
@@ -80,201 +95,211 @@ class Enemy {
 
 
 
-class NameException : Exception { 
+class NameException : Exception {
 	public NameException(string name) : base("Name cannot be empty.") { }
 }
 
-class HealthOrManaException : Exception {
-	public HealthOrManaException(int num) : base("Health or Mana cannot be zero on initialization.") {}
-}
+class Program {
 
-class Program { 
+    static void movePlayer(Player player, string direction, string[] descriptions) {
+        Room nextRoom = null;
+        switch(direction) {
+            case "north":
+                nextRoom = player.CurrentRoom.North;
+                break;
+            case "east":
+                nextRoom = player.CurrentRoom.East;
+                break;
+            case "south":
+                nextRoom = player.CurrentRoom.South;
+                break;
+            case "west":
+                nextRoom = player.CurrentRoom.West;
+                break;
+            default:
+                //player cannot go that way
+                WriteLine(descriptions[90]);
+                return;
+        }
 
-	static void mainMenu() {
+		if(player.CurrentRoom.RoomNumber == 0 && direction.ToLower() == "south") {
+			//player enters south in the first room, exit the dungeon
+			WriteLine(descriptions[99]);
+			player.GameOver = true;
+			return;
+		}
+
+		if(nextRoom == null) {
+			WriteLine(descriptions[90]);
+			return;
+		}
+
+
+
+		if(nextRoom.Locked) {
+			WriteLine(descriptions[91]);
+			if(!player.PlayerHasKey) {
+				WriteLine(descriptions[92]);
+				return;
+			}
+			//player has the key, unlock the door
+			nextRoom.Locked = false;
+		}
+
+		//remember previous room
+		player.PreviousRoom = player.CurrentRoom;
+		//actually move the player
+		player.CurrentRoom = nextRoom;
+		//mark the new room as visited
+		player.CurrentRoom.Visited = true;
+		
+		//pick up the key in room 3 (west of the starting room)
+		if(player.CurrentRoom.RoomNumber == 3 && !player.PlayerHasKey) {
+			player.PlayerHasKey = true;
+		}
+
+		//display new room description
+		Console.Clear();
+		//WriteLine(descriptions[player.CurrentRoom.DescriptionIndex]);
+    }
+
+
+    static void mainMenu() {
 		WriteLine("\tMain Menu");
 		WriteLine("\t============");
 		WriteLine("\t1) Play");
 		WriteLine("\t2) Credits");
-		WriteLine("\t3) Quit");
-	   int menuChoice = Convert.ToInt32(ReadLine());
+		WriteLine("\t3) Instructions");
+		WriteLine("\t99) Quit");
+		int menuChoice = Convert.ToInt32(ReadLine());
 		switch(menuChoice) {
 			case 1:
-					Console.Clear(); //clear the screen before the game starts. Makes it so that once the game starts, the menu doesn't show up.
-					gameLoop(); //
+				Console.Clear(); //clear the screen before the game starts. Makes it so that once the game starts, the menu doesn't show up.
+				gameLoop();
 				break;
 			case 2:
-					Console.Clear();
-					WriteLine("\tThis game was created for a final project at GRCC.");
-					WriteLine("\t==================================================\n");
-					WriteLine("\tThe team members for this project were:");
-					WriteLine("\t* Jacob Seadorf");
-					WriteLine("\t* Jacob Powell");
-					WriteLine("\t* Brandon Choang");
-					mainMenu();	
+				Console.Clear();
+				WriteLine("\tThis game was created for a final project at Grand Rapids Community College.");
+				WriteLine("\t==================================================\n");
+				WriteLine("\tThe team members for this project were:");
+				WriteLine("\t* Jacob Seadorf");
+				WriteLine("\t* Jacob Powell");
+				WriteLine("\t* Brandon Choang");
+				mainMenu();
 				break;
 			case 3:
-					Environment.Exit(0); //zero is used to mean "nothing went wrong"; exiting with 1 or another number usually means an error. 
+				Console.Clear();
+				WriteLine("\t\tGAME INSTRUCTIONS");
+				WriteLine("\t======================================");
+				WriteLine("The game will display a room description and a set of valid directions.");
+				WriteLine("The valid directions you can enter are the first letter of the direction (n, e, s, w), \nor the full word (north, east, south, west).\nThe player input is not case-sensative.");
+				mainMenu();
 				break;
+			case 99:
+                Environment.Exit(0); //zero is used to mean "nothing went wrong"; exiting with 1 or another number usually means an error. 
+                break;
 			default:
-					WriteLine("Error: Invalid Menu Option");
-					mainMenu();
+				WriteLine("Error: Invalid Menu Option");
+				mainMenu();
 				break;
 		}
 	}
 
 
-	//Actual game logic happens here, called from the while loop in mainMenu
+		//Actual game logic happens here, called from the while loop in mainMenu
 	static void gameLoop() {
-		//maybe an array of strings containing room descriptions, like a choose your own adventure book?
-		//maybe a random number generator, say 1 to 6, and if it rolls a certain number, the player encounters a monster?
+	   string[] descriptions = new string[100];
+		//descriptions for special circumstances are best, in my opinion, left at the end of the array.
+		descriptions[90] = "You cannot go that way."; //obvious what this does	
+		descriptions[91] = "The door to this room is locked.";
+		descriptions[97] = "You flee from the monster!"; //maybe a random chance to not flee?
+		descriptions[99] = "You have left the dungeon of your own free will.\n\nGAME OVER"; //player enters "south" in the first room
+		descriptions[98] = "You died!\n\nGAME OVER"; //obvious what this does 
+		descriptions[92] = "You do not have the key. You cannot go this way until you find it."; //player does not have the key for a door
+		
+		//regular rooms are from 0-89, plenty of different options we could do.
+		descriptions[0] = "ROOM 1\nTo the north you see a locked door. To the west, you see a room with a fountain. To the south, you see the exit."; //first room, player starts here
+		descriptions[1] = "ROOM 2\nTo the south, you see the beginning of the dungeon. To the west, you see a set of stairs.";
+		descriptions[2] = "ROOM 3\nTo the east you see the room with the locked door." +
+			"\nIn this room, you see a fountain. As you walk over to the fountain, you see a key shimmering in the water.\nYou pick up the key and add it to your inventory.";
+		descriptions[3] = "ROOM 4\nOpening the door, you see a set of stairs. Going down the stairs you see a dusty old library.";
+		descriptions[4] = "ROOM 5\n";
+
+			//create the rooms
+		Room startingRoom = new Room(0, 0);
+		Room lockedDoor = new Room(1, 1);
+		Room fountainRoom = new Room(2, 2);
+		Room afterLockedDoor = new Room(3, 3);
+
+		//define connections to each room 
+		
+		//room 0 connects to room 2 via the west    
+		startingRoom.West = fountainRoom;
+		fountainRoom.East = startingRoom;
+		//room 0 connects to room 1 via the north; this is the locked door that requires a key.
+		startingRoom.North = lockedDoor;
+		lockedDoor.South = startingRoom;
+
+
+		//lock room 1
+		lockedDoor.Locked = true;
+
+		Write("What is your name? ");
+		string playerName = ReadLine();
+			
+		//check if player name is empty
+		if(String.IsNullOrWhiteSpace(playerName)) { throw new NameException(playerName); } else { WriteLine("Go forth, " + playerName + "!"); }
+
+
+		//actually create the player and start the gmae
+		Player player = new Player(playerName, startingRoom);
+		player.CurrentRoom.Visited = true;
 
 		
-
-
-        Random rng = new Random(); //random number generator
-		int d6 = rng.Next(1, 7); //roll 1 to 6
-		int d20 = rng.Next(1, 21);
-
-        Player player = new Player();
-        player.isPlayerDead = false;
-
-		int playerHealthRoll = rng.Next(25, 51); //number between 25 and 50
-
-		player.health = playerHealthRoll;
-		if(playerHealthRoll <= 0) { throw new HealthOrManaException(player.health); } //check to make sure health actually got assigned properly
-
-		//get the player character's name
-		Write("What is your name, adventurer? ");
-		player.name = ReadLine();
-
-		//check if name is "" or " ", throw an exception if the name is an empty string or whitespace.
-		if(string.IsNullOrWhiteSpace(player.name)) {
-			throw new NameException(player.name);
-		} else { WriteLine("Go forth, " + player.name + "!"); }
-
-		moveRoom(0); //print the text for the very first room, don't worry about the key
-		
-		//process user input for the game
-		while(player.isPlayerDead == false) {
-            if(player.health <= 0) {
-                moveRoom(98); //player has died
-				player.isPlayerDead = true;
-            } else { 
-				processInput();
-            }
+		while(player.IsPlayerDead == false && player.GameOver == false) {
+			Console.Clear();
+            WriteLine(descriptions[player.CurrentRoom.DescriptionIndex]);
+            Write("Where do you want to go? >> ");
+			string input = ReadLine();
+			string direction = processInput(input);
+            movePlayer(player, direction, descriptions);
         }
-		
-
-
-		
 	}
 
-	static void moveRoom(int destination) {
-        string[] rooms = new string[100];
-        //rooms for special circumstances are best, in my opinion, left at the end of the array.
-        //We can jump back to the most recent room before the circumstance
-        rooms[97] = "You flee from the monster!"; //maybe a random chance to not flee?
-        rooms[99] = "You have left the dungeon of your own free will.\n\nGAME OVER"; //player enters S in the first room
-        rooms[98] = "You died!\n\nGAME OVER"; //self explanatory 
-        rooms[96] = "You do not have the key. You cannot go this way until you find it."; //player does not have the key for a door
-        rooms[95] = "Alright then."; //player enters lowercase n for a Y/n option.
 
-        rooms[0] = "ROOM 1\nTo the north you see a locked door. You do not have the key...\nOptions are: N E S"; //first room, no key.
-        rooms[1] = "ROOM 1\nTo the north you see a locked door. You use the key."; //first room, has the key.
-        rooms[2] = "ROOM 2\nTo the west you see the room with the locked door." +
-            "\nIn this room, you see a fountain. As you walk over to the fountain, you see a key shimmering in the water.\nYou pick up the key and add it to your inventory.";
-        rooms[3] = "ROOM 3\nOpening the door, you see a set of stairs. Going down the stairs leads further into the dungeon. Treasure and danger await...";
-        rooms[4] = "ROOM 4\nGoing down the stairs, you see a monster. Attack the monster? (Y/n)";
-		WriteLine(rooms[destination]);
-    }
+		//processInput just recognizes the player's input; actually checking to see if the player can move to a room is done by movePlayer
+		static string processInput(string input) {
+			switch(input) {
+				case "N":
+				case "n":
+				case "north":
+				case "North":
+				case "NORTH":
+						return "north";
+				case "E":
+				case "e":
+				case "east":
+				case "East":
+				case "EAST":
+					return "east";
+				case "S":
+				case "s":
+				case "south":
+				case "South":
+				case "SOUTH":
+						return "south";
+				case "w":
+				case "W":
+				case "west":
+				case "West":
+				case "WEST":
+						return "west";
+					default:
+						return "invalid";
+			}
+		}
 
-	static void moveRoom(int destination, bool playerHasKey) {
-        string[] rooms = new string[100];
-		//rooms for special circumstances are best, in my opinion, left at the end of the array.
-		//We can jump back to the most recent room before the circumstance
-		rooms[94] = "You are at the beginning of the dungeon. To the south you see the exit."; 
-		rooms[97] = "You flee from the monster!"; //maybe a random chance to not flee?
-        rooms[99] = "You have left the dungeon of your own free will.\n\nGAME OVER"; //player enters S in the first room
-        rooms[98] = "You died!\n\nGAME OVER"; //self explanatory 
-        rooms[96] = "You do not have the key. You cannot go this way until you find it."; //player does not have the key for a door
-        rooms[95] = "Alright then."; //player enters lowercase n for a Y/n option.
-
-        rooms[0] = "ROOM 1\nTo the north you see a locked door. You do not have the key. To the south, you see the exit to the dungeon.\nOptions are: N E S"; //first room, no key.
-        rooms[1] = "ROOM 1\nTo the north you see a locked door. You use the key."; //first room, has the key.
-        rooms[2] = "ROOM 2\nTo the west you see the room with the locked door." +
-            "\nIn this room, you see a fountain. As you walk over to the fountain, you see a key shimmering in the water.\nYou pick up the key and add it to your inventory.\nOptions are: W";
-        rooms[3] = "ROOM 3\nOpening the door, you see a set of stairs. Going down the stairs leads further into the dungeon. Treasure and danger await...";
-        rooms[4] = "ROOM 4\nGoing down the stairs, you see a monster. You attack the monster!";
-        
-		if(playerHasKey == false) { 
-			WriteLine(rooms[96]); 
-		} else if(destination == 2) {
-			playerHasKey = true;
-			processInput();
-        } else {
-            WriteLine(rooms[destination]); //write the corresponding room text
-        }
-    }
-
-
-	static void processInput() {
-        bool playerHasKey = false; //player does not have the key when they start the game.
-		int currentRoom = 0; //player is in the first room when they start the game
-        Write("Where do you go? >> ");
-
-        string option = ReadLine();
-
-        switch(option) {
-            case "N":
-            case "n":
-            case "north":
-            case "North":
-				if(playerHasKey == false) {
-					moveRoom(1, false);
-                } else { 
-					moveRoom(2, true); 
-				}
-                processInput();
-                break;
-            case "E":
-            case "e":
-            case "east":
-            case "East":
-				moveRoom(2);
-				processInput();
-                break;
-            case "S":
-            case "s":
-            case "south":
-            case "South":
-                if(currentRoom == 0) {
-                    //player has left the dungeon of their own free will
-                    moveRoom(99);
-					Environment.Exit(0);
-				} 
-				processInput();
-                break;
-            case "w":
-            case "W":
-            case "west":
-            case "West":
-                WriteLine("You go west");
-				processInput();
-                break;
-			case "quit":
-			case "q":
-			case "Quit":
-				WriteLine("Goodbye.");
-				Environment.Exit(0);
-				break;
-            
-			default:
-                WriteLine("I don't understand. Could you repeat that?");
-				processInput();
-                break;
-        }
-    }
-    static void Main() {
-		mainMenu();
-	}
-}
+		static void Main() {
+			mainMenu();
+			}
+		}
