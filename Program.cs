@@ -77,9 +77,25 @@ class Enemy {
 
 		if(Response == "A" || Response == "a") {
 
-			//maybe roll a random number for damage, and subtract from the player's health?
+		// Note: I am considering using inheritence for different types of enemies, 
+		// but would have to refresh my memory on how to do it. -JP 11/16/26 
 
-			WriteLine("You died... He had a bazooka");
+        if(Response == "A" || Response == "a") {
+			
+			//maybe roll a random number for damage, and subtract from the player's health?
+			// I think this does the two things you mentioned. JP 11/16/26
+
+            Random rng = new Random();
+			// Random num for damage |
+			//                       V
+			int damage = rng.Next(5, 16);
+			WriteLine("The enemy attacks you for " + damage + " damage!");
+			// Damage is subtracted from player health.
+			//             |
+			//             V
+			
+			player.health -= damage;
+			WriteLine("Your remaining health: " + player.health);
 
 
 		} else if(Response == "B" || Response == "b") {
