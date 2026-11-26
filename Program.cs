@@ -162,25 +162,9 @@ class Program {
 		player.CurrentRoom.Visited = true;
 
 
-		////if player answers the riddle correctly in room 18
-		//if(player.CurrentRoom.RoomNumber == 18 && direction.ToLower() == "coin") {
-			
-		//	player.inventory.Add("Gem of Power");
-		//	player.score += 1000;
-  //          WriteLine(descriptions[19]);
-		//	player.playerWin = true;
-		//	return;
-  //      }
-
 		//player is in a library
 		if(player.CurrentRoom.RoomNumber == 3 || player.CurrentRoom.RoomNumber == 8) {
 			player.inventory.Add("Magical Book");
-		}
-
-		//player has found the Gem of Power
-		if(player.CurrentRoom.RoomNumber == 19) {
-
-			return;
 		}
 
 		//player has discovered a hidden room
@@ -264,7 +248,7 @@ class Program {
 		descriptions[81] = "HIDDEN ROON 2\nCongratulations! You've found a hidden room! To the south is the hallway.\nYou've gained 250 gold pieces.";
 
 		//regular rooms, plenty of different options we could do.
-		descriptions[0] = "ROOM 0\nTo the north you see an old wooden door. To the west, you see a library. \nTo the east, you see a room with a fountain. \nTo the south, you see the exit."; //first room, player starts here
+		descriptions[0] = "ROOM 0\nTo the north you see an old wooden door. To the west, you see a library. \nTo the east, you see a room with a fountain. \nTo the south, you see the exit.\n\nNOTE: Every time you enter a room, you are always facing north."; //first room, player starts here
 		descriptions[1] = "ROOM 1\nTo the south, you see the first room of the dungeon. To the north, you see what appears to be an armory. \nThis room appears to just be a hallway. " +
 			"\nOn either side of you, the cracking stone walls show intricate carvings of a mystical gem."; //first hallway, hidden room on the west side
 		descriptions[2] = "ROOM 2\nTo the west you see the beginning of the dungeon." +
@@ -279,13 +263,13 @@ class Program {
 		descriptions[8] = "ROOM 8\nThis appears to be another hallway. To the south is the dining room, to the north is a room with a fountain.\nThe walls are covered in intricate stone carvings showing just how powerful the Gem is rumored to be.\nOne carving on the western wall shows a fearsome dragon attacking a village, \nand another on the eastern wall shows the dragon being driven away from the village by the Gem.\nThe Gem of Power, if it exists, is clearly very powerful.";
 		descriptions[9] = "ROOM 9\nThis room has a fountain in the center. As you approach the fountain, you feel rejuvinated. \nTo the north is a library, to the west and east there are other rooms. To the south is the hallway.";
 		descriptions[10] = "ROOM 10\nThis room is another hallway. The walls are covered in glowing mushrooms, \nwhich provide some light as you walk down the passageway. \nOn the cracked stone walls you see stone carvings of the Gem granting wealth, power, and prestige to those who own it.";
-		descriptions[11] = "ROOM 11\n";
+		descriptions[11] = "ROOM 11\nValid directions are W.";
 		descriptions[12] = "ROOM 12\nThis room appears to be a library. Opening a book, the following text suddenly appears, as if by magic: \n\n\"There are hidden rooms in the dungeon. Exploration is rewarded.\"";
-		descriptions[13] = "ROOM 13\n";
-		descriptions[14] = "ROOM 14\n";
-		descriptions[15] = "ROOM 15\n";
-		descriptions[16] = "ROOM 16\n";
-		descriptions[17] = "ROOM 17\n";
+		descriptions[13] = "ROOM 13\nValid directions are E, N.";
+		descriptions[14] = "ROOM 14\nValid directions are S, N.";
+		descriptions[15] = "ROOM 15\nValid directions are N, E, S.";
+		descriptions[16] = "ROOM 16\nValid directions are N, W.";
+		descriptions[17] = "ROOM 17\nValid directions are W, S.";
 		descriptions[18] = "ROOM 18\nBefore you stands a stone wall inscribed with a riddle carved in runes: \n\n\"I have a golden head and golden tail, but no body. What am I?\"\nTo the south is the way you came.";
 		descriptions[19] = "ROOM 19\nYou are worthy.\n\nIn the center of the room, you see a stone pillar. \nOn top of the pillar sits the Gem of Power, glowing with magical energy. \nThe room's walls are decorated with every stone carving you saw earlier in the dungeon.\n";
 
@@ -429,7 +413,7 @@ class Program {
 
 			if(player.GameOver == true) {
 				//Display score
-				WriteLine("Your score is: " + player.score + " points.");
+				WriteLine("'Your score is: " + player.score + " points.");
 				WriteLine("GAME OVER");
 				Environment.Exit(0);
 			}
