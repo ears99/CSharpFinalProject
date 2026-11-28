@@ -8,10 +8,11 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Xml.Linq;
-using System.Collections.Generic;
 using static System.Console;
 
 
@@ -33,6 +34,8 @@ class Room {
 	public Room West { get; set; }
 	public bool Locked { get; set; }
 	public bool Visited { get; set; }
+
+	public bool InFountainRoom { get; set; } //player is in a room with a fountain; have a 0% chance for combat so the player can heal
 }
 class Player {
 	public Player(string name, Room startingRoom) {
@@ -68,7 +71,7 @@ class Enemy {
 		WriteLine("GIMME ALL YOUR MONEY!!!");
 	}
 
-	public void Confrontation() {
+	public void Confrontation(Player player) {
 		EnemyTaunt();
 		WriteLine("What is your action? R for run, A for attack, B for bribe >>");
 		string Response = ReadLine();
@@ -77,39 +80,42 @@ class Enemy {
 
 		if(Response == "A" || Response == "a") {
 
-		// Note: I am considering using inheritence for different types of enemies, 
-		// but would have to refresh my memory on how to do it. -JP 11/16/26 
+			// Note: I am considering using inheritence for different types of enemies, 
+			// but would have to refresh my memory on how to do it. -JP 11/16/26 
 
-        if(Response == "A" || Response == "a") {
-			
-			//maybe roll a random number for damage, and subtract from the player's health?
-			// I think this does the two things you mentioned. JP 11/16/26
+			if(Response == "A" || Response == "a") {
 
-            Random rng = new Random();
-			// Random num for damage |
-			//                       V
-			int damage = rng.Next(5, 16);
-			WriteLine("The enemy attacks you for " + damage + " damage!");
-			// Damage is subtracted from player health.
-			//             |
-			//             V
-			
-			player.health -= damage;
-			WriteLine("Your remaining health: " + player.health);
+				//maybe roll a random number for damage, and subtract from the player's health?
+				// I think this does the two things you mentioned. JP 11/16/26
 
+				Random rng = new Random();
+				// Random num for damage |
+				//                       V
+				int damage = rng.Next(5, 16);
+				WriteLine("The enemy attacks you for " + damage + " damage!");
+				// Damage is subtracted from player health.
+				//             |
+				//             V
 
-		} else if(Response == "B" || Response == "b") {
-			WriteLine("He took literally everything you had... but you lived");
+				player.health -= damage;
+				WriteLine("Your remaining health: " + player.health);
 
 
-		} else if(Response == "R" || Response == "r") {
-			WriteLine("Somehow you escaped...");
+			} else if(Response == "B" || Response == "b") {
+				player.score -= 50; //player loses score (gold) for bribing enemy
+				WriteLine("He took literally everything you had... but you lived");
 
 
-		} else {
-			WriteLine("You froze! The perpetrator kidnapped you!");
+			} else if(Response == "R" || Response == "r") {
+				WriteLine("Somehow you escaped...");
+
+
+			} else {
+				WriteLine("You froze! The perpetrator kidnapped you!");
+			}
 		}
 	}
+
 
 
 	public int health { get; set; }
@@ -130,7 +136,7 @@ class NameException : Exception {
 class Program {
 
 	static void movePlayer(Player player, string direction, string[] descriptions) {
-		
+
 		Room nextRoom = null;
 		switch(direction) {
 			case "north":
@@ -159,6 +165,13 @@ class Program {
 			return;
 		}
 
+		//if player is in the riddle room and tries to go north
+		if(player.CurrentRoom.RoomNumber == 18 && direction.ToLower() == "north") {
+			Console.Clear();
+			WriteLine("You must answer the riddle to go forward from here.");
+			return;
+		}
+
 		if(nextRoom == null) {
 			Console.Clear();
 			WriteLine(descriptions[90]); //"I'm sorry, I don't understand."
@@ -183,17 +196,31 @@ class Program {
 			player.inventory.Add("Magical Book");
 		}
 
-		//player has discovered a hidden room
-		if(player.CurrentRoom.RoomNumber == 80 || player.CurrentRoom.RoomNumber == 81) {
+		//player has discovered first hidden room
+		if(player.CurrentRoom.RoomNumber == 80 || player.CurrentRoom.RoomNumber == 81 || player.CurrentRoom.RoomNumber == 82) {
 			player.score += 100;
+		}
+		
+		//player has discovered second hidden room
+		if(player.CurrentRoom.RoomNumber == 80 || player.CurrentRoom.RoomNumber == 81 || player.CurrentRoom.RoomNumber == 82) {
+			player.score += 200;
+		}
+
+		//player has discovered third hidden room
+		if(player.CurrentRoom.RoomNumber == 82) {
+			player.score += 250;
 		}
 
 		//player is in a room with a fountain
 		if(player.CurrentRoom.RoomNumber == 2 || player.CurrentRoom.RoomNumber == 9) {
-			if(player.health > 0) {
+			player.CurrentRoom.InFountainRoom = true;
+			player.inventory.Add("Coin");
+			//player health is less than 20 but greater than 0
+			if(player.health > 0 && player.health < 20) {
 				player.health = 20;
 			}
-		}
+		} else { player.CurrentRoom.InFountainRoom = false; }
+		
 
 		//display new room description
 		Console.Clear();
@@ -248,21 +275,22 @@ class Program {
 	}
 
 
-		//Actual game logic happens here, called from the while loop in mainMenu
+	//Actual game logic happens here, called from the while loop in mainMenu
 	static void gameLoop() {
-	   string[] descriptions = new string[100];
-		
+		string[] descriptions = new string[100];
+
 		//descriptions for special circumstances are best, in my opinion, left at the end of the array.
 		descriptions[90] = "I'm sorry, I don't understand."; //obvious what this does	
 		descriptions[91] = "You have encountered a monster!"; //player has encountered a monster
 		descriptions[97] = "You flee from the monster!"; //maybe a random chance to not flee?
 		descriptions[99] = "You have left the dungeon without the Gem of Power, never knowing if it truly exists or not."; //player enters "south" in the first room
-		descriptions[98] = "You died!\n\nGAME OVER"; //obvious what this does 
-		
+		descriptions[98] = "You died!"; //obvious what this does 
+
 		//hidden rooms
 		descriptions[80] = "HIDDEN ROOM 1\nCongratulations! You've found a hidden room! To the east is the hallway with the stone carvings.\nYou've gained 100 gold pieces.";
-		descriptions[81] = "HIDDEN ROON 2\nCongratulations! You've found a hidden room! To the south is the hallway.\nYou've gained 250 gold pieces.";
-
+		descriptions[81] = "HIDDEN ROOM 2\nPushing on the stone carving, you have discovered a hidden room! To the west is the hallway.\nYou've gained 200 gold pieces";
+		descriptions[82] = "HIDDEN ROON 3\nCongratulations! You've found a hidden room! To the south is the hallway.\nYou've gained 250 gold pieces.";
+				
 		//regular rooms, plenty of different options we could do.
 		descriptions[0] = "ROOM 0\nTo the north you see an old wooden door. To the west, you see a library. \nTo the east, you see a room with a fountain. \nTo the south, you see the exit.\n\nNOTE: Every time you enter a room, you are always facing north."; //first room, player starts here
 		descriptions[1] = "ROOM 1\nTo the south, you see the first room of the dungeon. To the north, you see what appears to be an armory. \nThis room appears to just be a hallway. " +
@@ -277,17 +305,17 @@ class Program {
 		descriptions[6] = "ROOM 6\nThis room is a makeshift kitchen. You see a long extinguished fireplace, meat hooks, and long-empty barrels, \npotentially holding dried provisions.\nTo the west, you see the armory. To the east, you see a dining room.";
 		descriptions[7] = "ROOM 7\nThis room is a dining room. \nDining chairs sit around a table, although there are no plates or silverware on the table, as this room has clearly long been abandoned.\nTo the north is another hallway. To the west is the kitchen.";
 		descriptions[8] = "ROOM 8\nThis appears to be another hallway. To the south is the dining room, to the north is a room with a fountain.\nThe walls are covered in intricate stone carvings showing just how powerful the Gem is rumored to be.\nOne carving on the western wall shows a fearsome dragon attacking a village, \nand another on the eastern wall shows the dragon being driven away from the village by the Gem.\nThe Gem of Power, if it exists, is clearly very powerful.";
-		descriptions[9] = "ROOM 9\nThis room has a fountain in the center. As you approach the fountain, you feel rejuvinated. Looking into the fountain, you see many gold coins, presumably thrown into the fountain by the guards. \nTo the north is a library, to the west and east there are other rooms. To the south is the hallway.";
+		descriptions[9] = "ROOM 9\nThis room has a fountain in the center. As you approach the fountain, you feel rejuvinated. \nLooking into the fountain, you see many gold coins, presumably thrown into the fountain by the guards. \nTo the north is a library, to the west and east there are other rooms. To the south is the hallway.";
 		descriptions[10] = "ROOM 10\nThis room is another hallway. The walls are covered in glowing mushrooms, \nwhich provide some light as you walk down the passageway. \nOn the cracked stone walls you see stone carvings of the Gem granting wealth, power, and prestige to those who own it.";
-		descriptions[11] = "ROOM 11\nValid directions are W.";
+		descriptions[11] = "ROOM 11\nThis room seems to be a storage room -- tools, dried food, and other miscellaneous items are scattered around the room. The only exit is to the west.";
 		descriptions[12] = "ROOM 12\nThis room appears to be a library. Opening a book, the following text suddenly appears, as if by magic: \n\n\"There are hidden rooms in the dungeon. Exploration is rewarded.\"";
-		descriptions[13] = "ROOM 13\nValid directions are E, N.";
-		descriptions[14] = "ROOM 14\nValid directions are S, N.";
-		descriptions[15] = "ROOM 15\nValid directions are N, E, S.";
-		descriptions[16] = "ROOM 16\nValid directions are N, W.";
-		descriptions[17] = "ROOM 17\nValid directions are W, S.";
-		descriptions[18] = "ROOM 18\nBefore you stands a stone wall inscribed with a riddle carved in runes: \n\n\"I have a golden head and golden tail, but no body. What am I?\"\nTo the south is the way you came.";
-		descriptions[19] = "ROOM 19\nYou are worthy.\n\nIn the center of the room, you see a stone pillar. \nOn top of the pillar sits the Gem of Power, glowing with magical energy. \nThe room's walls are decorated with every stone carving you saw earlier in the dungeon.\n";
+		descriptions[13] = "ROOM 13\nThis room is a winding hallway, with metal braziers hanging from chains. They seem to be lit as if by magic. \nTo the east is the hallway with glowing mushrooms, and to the north is a burial chamber.";
+		descriptions[14] = "ROOM 14\nThis room appears to be a burial chamber. \nSarcophagi are arranged along the western and eastern walls, and carved into the walls are stone murals \ndepicting knights defending the Gem of Power in battle. \nTo the south is the winding hallway, and to the north is another hallway.";
+		descriptions[15] = "ROOM 15\nThis room is a long hallway, with statues of knights along the western wall. \nThe walls and statues are covered in moss and vine, having long been abandoned. \nTo the east is a chapel, to the south is another hallway, to the north is a mysterious room...";
+		descriptions[16] = "ROOM 16\nThis room appears to be a chapel of some kind. \nIn the middle of the room is an old altar, and to the north is an old wooden door. \nTo the west is the hallway with statues.";
+		descriptions[17] = "ROOM 17\nThis room appears to be a crypt. Sarcophagi are placed in alcoves carved into the stone walls. \nThe sarcophagi clearly hold the remains of the guards who lived here.\nThere is a room to the west, and a room to the south.";
+		descriptions[18] = "ROOM 18\nBefore you stands a stone wall inscribed with a riddle carved in runes: \n\n\"I have a golden head and golden tail, but no body. What am I?\"\nTo the south is the hallway with statues, and to the east is the chapel.";
+		descriptions[19] = "ROOM 19\nYou are worthy.\nThe stone wall splits down the middle, as if by magic, allowing you to pass through.\n\nIn the center of this room, you see a stone pillar surrounded by jewels, gold, and other treasures.\nOn top of the pillar sits the Gem of Power, glowing with magical energy. \nThe room's walls are decorated with every stone carving you saw earlier in the dungeon.\n";
 
 		//create the rooms
 		Room startingRoom = new Room(0, 0);
@@ -301,24 +329,26 @@ class Program {
 		Room secondHallway = new Room(8, 8);
 		Room secondFountain = new Room(9, 9); //player can go n, w, e, or s here
 		Room thirdHallway = new Room(10, 10);
-		Room room11 = new Room(11, 11);
+		Room storageRoom = new Room(11, 11);
 		Room secondLibrary = new Room(12, 12);
 		Room room13 = new Room(13, 13);
 		Room room14 = new Room(14, 14);
 		Room room15 = new Room(15, 15);
 		Room room16 = new Room(16, 16);
-		Room room17 = new Room(17, 17);
+		Room burialRoom = new Room(17, 17);
 		Room riddleRoom = new Room(18, 18);
 		Room gemRoom = new Room(19, 19);
 
 		//hidden rooms
-		Room firstHidden = new Room(80, 80); //first hidden room in the first hallway
+		Room firstHidden = new Room(80, 80); //first hidden room is west of room 1 (first hallway)
 		Room secondHidden = new Room(81, 81); //second hidden room is north of room 10 (third hallway)
+		Room thirdHidden = new Room(82, 82); //third hidden room is east of room 8 (second hallway)
+		
 
 		//connect rooms in both directions, so the player can move between them
 		startingRoom.East = firstFountain;
 		firstFountain.West = startingRoom;
-		
+
 		startingRoom.West = firstLibrary;
 		firstLibrary.East = startingRoom;
 
@@ -346,14 +376,17 @@ class Program {
 		secondHallway.North = secondFountain;
 		secondFountain.South = secondHallway;
 
+		secondHallway.East = secondHidden;
+		secondHidden.West = secondHallway;
+
 		secondFountain.North = secondLibrary;
 		secondLibrary.South = secondFountain;
 
-		secondFountain.West = thirdHallway; 
+		secondFountain.West = thirdHallway;
 		thirdHallway.East = secondFountain;
 
-		thirdHallway.North = secondHidden;
-		secondHidden.South = thirdHallway;
+		thirdHallway.North = thirdHidden;
+		thirdHidden.South = thirdHallway;
 
 		thirdHallway.West = room13;
 		room13.East = thirdHallway;
@@ -369,38 +402,38 @@ class Program {
 		room15.East = room16;
 		room16.West = room15;
 
-		room16.North = room17;
-		room17.South = room16;
+		room16.North = burialRoom;
+		burialRoom.South = room16;
 
-		room17.West = riddleRoom;
-		riddleRoom.East = room17;
+		burialRoom.West = riddleRoom;
+		riddleRoom.East = burialRoom;
 
 		riddleRoom.South = room15;
-		riddleRoom.East = room17;
+		riddleRoom.East = burialRoom;
 
 		riddleRoom.North = gemRoom;
 		gemRoom.South = riddleRoom;
 
 
-		secondFountain.East = room11; //room 9 connection to room 11
-		room11.West = secondFountain;
-
-
+		secondFountain.East = storageRoom;
+		storageRoom.West = secondFountain;
 
 
 		Write("What is your name? ");
 		string playerName = ReadLine();
-			
+
 		//check if player name is empty
 		if(String.IsNullOrWhiteSpace(playerName)) { throw new NameException(playerName); }
-		WriteLine("Go forth, " + playerName + "!");
+
 
 		//actually create the player and start the game
 		Player player = new Player(playerName, startingRoom);
 		player.CurrentRoom.Visited = true;
 
 		Console.Clear();
-		
+		WriteLine("Go forth, " + playerName + "!");
+		WriteLine();
+
 		//game loop
 		while(player.IsPlayerDead == false || player.GameOver == false || player.playerWin == false) {
 			WriteLine(descriptions[player.CurrentRoom.DescriptionIndex]);
@@ -411,25 +444,36 @@ class Program {
 			//process input from the player
 			if(output == "inventory") {
 				PrintInventory(player.inventory);
-			} else if (output == "quit") {
-				//TODO: remove the ability to type "quit" to end the game prematurely; only used for testing.
-				WriteLine("Goodbye.");
+			} else if(output == "quit") {
+				//player quits the game prematurely.
+				WriteLine("Your score is: " + player.score + " points.");
+				WriteLine("GAME OVER");
 				Environment.Exit(0);
-			} else if (output == "coin" && player.CurrentRoom.RoomNumber == 18) {
+			} else if(output == "coin" && player.CurrentRoom.RoomNumber == 18) {
 				//player has entered the right answer to the riddle AND is in the correct room
 				Console.Clear();
 				WriteLine(descriptions[19]);
 				player.inventory.Add("Gem of Power");
 				player.score += 1000;
 				player.playerWin = true;
+			} else if(output == "die") {
+				//TODO: remove this if-statement when done with testing
+				player.health = -1;
 			} else { 
+				//player has entered a direction (north, east, south, west)
 				string direction = processInput(input);
 				movePlayer(player, output, descriptions);
 			}
 
+			//player has died
+			if(player.health <= 0) {
+				WriteLine(descriptions[98]); //"You have died, GAME OVER
+				player.GameOver = true;
+			}
+
 			if(player.GameOver == true) {
 				//Display score
-				WriteLine("'Your score is: " + player.score + " points.");
+				WriteLine("Your score is: " + player.score + " points.");
 				WriteLine("GAME OVER");
 				Environment.Exit(0);
 			}
@@ -437,6 +481,7 @@ class Program {
 			if(player.playerWin == true) {
 				Console.Clear();
 				WriteLine(descriptions[19]); //write the description for the gem room, then end the game
+				WriteLine("Congratulations, " + player.Name + "!");
 				WriteLine("You have found the Gem of Power!");
 				WriteLine("Your score is: " + player.score + " points.");
 				WriteLine("GAME OVER");
@@ -446,67 +491,68 @@ class Program {
 	}
 
 
-		//processInput just recognizes the player's input; actually checking to see if the player can move to a room is done by movePlayer
-		static string processInput(string input) {
-			switch(input) {
-				case "N":
-				case "n":
-				case "north":
-				case "North":
-				case "NORTH":
-						return "north";
-				case "E":
-				case "e":
-				case "east":
-				case "East":
-				case "EAST":
-					return "east";
-				case "S":
-				case "s":
-				case "south":
-				case "South":
-				case "SOUTH":
-					return "south";
-				case "w":
-				case "W":
-				case "west":
-				case "West":
-				case "WEST":
-					return "west";
-				case "I":
-				case "i":	
-				case "inventory":
-				case "Inventory":
-				case "INVENTORY":
-					return "inventory";
-				
-				//answer to the riddle in room 18
-				case "coin":
-				case "a gold coin":
-				case "a coin":
-				case "COIN":
-				case "A GOLD COIN":
-				case "A COIN":
-				case "gold coin":
-				case "Gold Coin":
-				case "A gold coin":
-				case "A Gold Coin":
-					return "coin";
-				
-				//TODO: Get rid of quit command for release; used for testing 
-				case "quit":
-				case "QUIT":
-					return "quit";
-				
-				default:
-					return "invalid";
-			}
+	//processInput just recognizes the player's input; actually checking to see if the player can move to a room is done by movePlayer
+	static string processInput(string input) {
+		switch(input) {
+			case "N":
+			case "n":
+			case "north":
+			case "North":
+			case "NORTH":
+				return "north";
+			case "E":
+			case "e":
+			case "east":
+			case "East":
+			case "EAST":
+				return "east";
+			case "S":
+			case "s":
+			case "south":
+			case "South":
+			case "SOUTH":
+				return "south";
+			case "w":
+			case "W":
+			case "west":
+			case "West":
+			case "WEST":
+				return "west";
+			
+			case "I":
+			case "i":
+			case "inventory":
+			case "Inventory":
+			case "INVENTORY":
+				return "inventory";
+
+			//answer to the riddle in room 18
+			case "coin":
+			case "a gold coin":
+			case "a coin":
+			case "COIN":
+			case "A GOLD COIN":
+			case "A COIN":
+			case "gold coin":
+			case "Gold Coin":
+			case "A gold coin":
+			case "A Gold Coin":
+				return "coin";
+			case "quit":
+			case "QUIT":
+				return "quit";
+			//TODO: remove "die" command; only used for testing game over screen
+			case "die":
+				return "die";
+			default:
+				return "invalid";
 		}
+	}
 
 	//uses hashsets to prevent multiple copies of the same item; every item is unique
-	static void PrintInventory(HashSet <string> l) {
-		if(l.Count == 0) { 
-			WriteLine("Your inventory is empty. Explore the dungeon to find items."); 
+	static void PrintInventory(HashSet<string> l) {
+		if(l.Count == 0) {
+			WriteLine("Your inventory is empty. Explore the dungeon to find items.");
 		} else {
 			Console.Clear();
 			WriteLine("INVENTORY");
@@ -518,7 +564,7 @@ class Program {
 		}
 	}
 
-		static void Main() {
-			mainMenu();
-			}
-		}
+	static void Main() {
+		mainMenu();
+	}
+}
